@@ -980,7 +980,7 @@ jobs:
                libayatana-appindicator3-dev \
                libasound2-dev \
                libc6-dev \
-               libclang-10-dev \
+               libclang-11-dev \
                libgstreamer1.0-dev \
                libgstreamer-plugins-base1.0-dev \
                libgtk-3-dev \
@@ -992,7 +992,7 @@ jobs:
                libxcb-xfixes0-dev \
                libxdo-dev \
                libxfixes-dev \
-               llvm-10-dev \
+               llvm-11-dev \
                nasm \
                ninja-build \
                openjdk-17-jdk-headless \
@@ -1249,7 +1249,7 @@ jobs:
                libayatana-appindicator3-dev \
                libasound2-dev \
                libc6-dev \
-               libclang-10-dev \
+               libclang-11-dev \
                libgstreamer1.0-dev \
                libgstreamer-plugins-base1.0-dev \
                libgtk-3-dev \
@@ -1261,7 +1261,7 @@ jobs:
                libxcb-xfixes0-dev \
                libxdo-dev \
                libxfixes-dev \
-               llvm-10-dev \
+               llvm-11-dev \
                nasm \
                ninja-build \
                openjdk-17-jdk-headless \
@@ -1536,7 +1536,7 @@ jobs:
                g++ \
                libayatana-appindicator3-dev \
                libasound2-dev \
-               libclang-10-dev \
+               libclang-11-dev \
                libgstreamer1.0-dev \
                libgstreamer-plugins-base1.0-dev \
                libgtk-3-dev \
@@ -1548,7 +1548,7 @@ jobs:
                libxcb-xfixes0-dev \
                libxdo-dev \
                libxfixes-dev \
-               llvm-10-dev \
+               llvm-11-dev \
                nasm \
                ninja-build \
                pkg-config \
@@ -1806,7 +1806,7 @@ jobs:
                g++ \
                libayatana-appindicator3-dev \
                libasound2-dev \
-               libclang-dev \
+               libclang-11-dev \
                libdbus-1-dev \
                libglib2.0-dev \
                libgstreamer1.0-dev \
