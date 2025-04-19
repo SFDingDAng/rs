@@ -1538,7 +1538,7 @@ jobs:
                g++ \
                libayatana-appindicator3-dev \
                libasound2-dev \
-               libclang-11-dev \
+               libclang-10-dev \
                libgstreamer1.0-dev \
                libgstreamer-plugins-base1.0-dev \
                libgtk-3-dev \
@@ -1550,7 +1550,7 @@ jobs:
                libxcb-xfixes0-dev \
                libxdo-dev \
                libxfixes-dev \
-               llvm-11-dev \
+               llvm-10-dev \
                nasm \
                ninja-build \
                pkg-config \
@@ -1808,7 +1808,7 @@ jobs:
                g++ \
                libayatana-appindicator3-dev \
                libasound2-dev \
-               libclang-11-dev \
+               libclang-dev \
                libdbus-1-dev \
                libglib2.0-dev \
                libgstreamer1.0-dev \
@@ -1975,6 +1975,7 @@ jobs:
         run: |
           # install libarchive-tools for bsdtar command used in AppImageBuilder.yml
           sudo apt-get update -y
+          # https://github.com/AppImage/AppImageKit/wiki/FUSE
           sudo apt-get install -y libarchive-tools libfuse2
           # set-up appimage-builder
           pushd /tmp
