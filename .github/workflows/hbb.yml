@@ -27,7 +27,7 @@ jobs:
           git fetch origin
           git checkout main
           git pull origin main
-          cd ..
+          cd ../..
           
           # 更新父仓库引用
           git add libs/hbb_common
