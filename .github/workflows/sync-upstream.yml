@@ -1,0 +1,49 @@
+name: Sync upstream and modify specific files
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天UTC午夜运行
+  workflow_dispatch:     # 允许手动触发
+
+jobs:
+  sync-and-modify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史记录
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/rustdesk/rustdesk.git
+          git fetch upstream
+
+      - name: Merge upstream changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git merge upstream/master --allow-unrelated-histories
+
+      - name: Modify .gitmodules file
+        run: |
+          sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
+          git submodule sync  # 更新子模块引用
+
+      - name: Modify src/common.rs file
+        run: |
+          sed -i 's|"https://admin.rustdesk.com".to_owned()|"https://rustdesk.dp0.cc".to_owned()|g' src/common.rs
+
+      - name: Update submodules
+        run: |
+          git submodule update --init --recursive
+
+      - name: Commit changes
+        run: |
+          git add .gitmodules src/common.rs
+          git commit -m "Sync upstream and update URLs [skip ci]" || echo "No changes to commit"
+          
+      - name: Push changes
+        run: git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
