@@ -30,7 +30,7 @@ jobs:
           cd ..
           
           # 更新父仓库引用
-          git add hbb
+          git add libs/hbb_common
           git commit -m "Update hbb submodule to latest [skip ci]" || echo "No submodule updates"
           
       - name: Push changes
