@@ -1,0 +1,39 @@
+name: Sync hbb submodule
+
+on:
+  schedule:
+    - cron: '0 1 * * *'  # 每天UTC时间1点运行
+  workflow_dispatch:     # 允许手动触发
+  push:
+    branches: [ main ]   # 主分支有推送时也触发
+
+jobs:
+  sync-submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update hbb submodule
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # 进入子模块目录
+          cd hbb
+          git fetch origin
+          git checkout main
+          git pull origin main
+          cd ..
+          
+          # 更新父仓库引用
+          git add hbb
+          git commit -m "Update hbb submodule to latest [skip ci]" || echo "No submodule updates"
+          
+      - name: Push changes
+        run: git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
