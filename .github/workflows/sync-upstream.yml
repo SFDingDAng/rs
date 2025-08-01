@@ -1,18 +1,15 @@
 name: Sync upstream and modify specific files
-
+ 
 on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
-
+ 
 jobs:
   sync-and-modify:
     runs-on: ubuntu-latest
+    # 当使用 PAT 时，我们不再需要 permissions 块
     
-    # 关键修正：使用 contents: write 来获取推送代码和修改工作流程文件的权限
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout current repo
         uses: actions/checkout@v4
@@ -22,40 +19,29 @@ jobs:
       
       - name: Add upstream remote
         run: git remote add upstream https://github.com/rustdesk/rustdesk.git
-
+ 
       - name: Fetch upstream (without submodules)
         run: git fetch upstream
 
-      - name: Update .gitmodules with new URL
+      - name: Update .gitmodules, merge, modify files
         run: |
           sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
-          git add .gitmodules
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update submodule URL" || echo "No changes to commit"
-
-      - name: Initialize submodules with new URL
-        run: |
           git submodule sync
           git submodule update --init --recursive --force
-
-      - name: Merge upstream changes
-        run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git submodule foreach --recursive 'git reset --hard'
           git merge upstream/master --allow-unrelated-histories || true
           git submodule update --recursive --force
-
-      - name: Modify src/common.rs file
-        run: |
           sed -i 's|"https://admin.rustdesk.com".to_owned()|"https://rustdesk.dp0.cc".to_owned()|g' src/common.rs
-
+          
       - name: Commit all changes
         run: |
-          git add .
-          git commit -m "Sync upstream and update URLs [skip ci]" || echo "No changes to commit"
+          git add -A
+          git commit -m "Sync upstream and update URLs [skip ci]" || echo "No new changes to commit"
           
-      - name: Push changes
-        # 不需要任何令牌或特殊配置，它会自动使用被授予权限的 GITHUB_TOKEN
-        run: git push
+      - name: Push changes using PAT
+        run: |
+          git config --unset credential.helper
+          
+          git push https://${{ secrets.PAT }}@github.com/SFDingDAng/rs.git HEAD:master
