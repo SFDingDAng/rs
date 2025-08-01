@@ -52,7 +52,5 @@ jobs:
 
       - name: Push changes
         run: |
-          # 禁用 checkout action 设置的默认 git 凭证管理器，确保我们的 PAT 生效
           git config --unset credential.helper
-          # 使用您的 PAT 进行推送
           git push https://${{ secrets.PAT }}@github.com/SFDingDAng/rs.git HEAD:master
