@@ -1,30 +1,38 @@
-name: Sync upstream and modify specific files
- 
+name: '[DEBUG] Sync upstream and modify files'
+
 on:
-  schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
- 
+  workflow_dispatch: # 暂时只保留手动触发，方便调试
+
 jobs:
-  sync-and-modify:
+  debug-sync:
     runs-on: ubuntu-latest
-    # 当使用 PAT 时，我们不再需要 permissions 块
-    
+
     steps:
-      - name: Checkout current repo
+      - name: 1. Verify PAT Secret is being passed
+        run: |
+          echo "Verifying the PAT secret..."
+          if [ -z "${{ secrets.PAT }}" ]; then
+            echo "::error::Secret PAT is empty or not found!"
+            exit 1
+          else
+            echo "::notice::Secret PAT is present. Length: ${{ env.PAT_LENGTH }}"
+          fi
+        env:
+          # 我们不直接打印 secret，而是打印它的长度，这既安全又能确认它存在
+          PAT_LENGTH: ${{ secrets.PAT && 'non-empty' || 'empty' }}
+
+      - name: 2. Checkout current repo
         uses: actions/checkout@v4
         with:
+          # 我们这次用 PAT 来 checkout，这是对 PAT 权限的第一次真实考验
+          token: ${{ secrets.PAT }}
           fetch-depth: 0
-          submodules: false
       
-      - name: Add upstream remote
-        run: git remote add upstream https://github.com/rustdesk/rustdesk.git
- 
-      - name: Fetch upstream (without submodules)
-        run: git fetch upstream
-
-      - name: Update .gitmodules, merge, modify files
+      # ... 中间的修改步骤保持不变 ...
+      - name: 3. Perform file modifications
         run: |
+          git remote add upstream https://github.com/rustdesk/rustdesk.git
+          git fetch upstream
           sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
           git submodule sync
           git submodule update --init --recursive --force
@@ -34,14 +42,10 @@ jobs:
           git merge upstream/master --allow-unrelated-histories || true
           git submodule update --recursive --force
           sed -i 's|"https://admin.rustdesk.com".to_owned()|"https://rustdesk.dp0.cc".to_owned()|g' src/common.rs
-          
-      - name: Commit all changes
-        run: |
           git add -A
           git commit -m "Sync upstream and update URLs [skip ci]" || echo "No new changes to commit"
-          
-      - name: Push changes using PAT
+
+      - name: 4. Attempt to push changes
         run: |
-          git config --unset credential.helper
-          
-          git push https://${{ secrets.PAT }}@github.com/SFDingDAng/rs.git HEAD:master
+          echo "Attempting to push to master branch..."
+          git push origin HEAD:master
