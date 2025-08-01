@@ -13,44 +13,43 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: 'recursive'  # 确保检出子模块
+          submodules: false  # 先不检出子模块
 
       - name: Add upstream remote
+        run: git remote add upstream https://github.com/rustdesk/rustdesk.git
+
+      - name: Fetch upstream (without submodules)
+        run: git fetch upstream
+
+      - name: Update .gitmodules with new URL
         run: |
-          git remote add upstream https://github.com/rustdesk/rustdesk.git
-          git fetch upstream --recurse-submodules
+          sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
+          git add .gitmodules
+          git commit -m "Update submodule URL" || echo "No changes to commit"
+
+      - name: Initialize submodules with new URL
+        run: |
+          git submodule sync  # 同步新的URL
+          git submodule update --init --recursive --force
 
       - name: Merge upstream changes
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          # 先重置子模块
+          # 重置所有子模块
           git submodule foreach --recursive 'git reset --hard'
-          # 尝试合并
+          # 合并主仓库
           git merge upstream/master --allow-unrelated-histories || true
-          # 处理子模块冲突
-          if [ -f .gitmodules.merge ]; then
-            mv .gitmodules.merge .gitmodules
-          fi
-          git submodule update --init --recursive --force
-
-      - name: Modify .gitmodules file
-        run: |
-          sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
-          git submodule sync
+          # 再次更新子模块
+          git submodule update --recursive --force
 
       - name: Modify src/common.rs file
         run: |
           sed -i 's|"https://admin.rustdesk.com".to_owned()|"https://rustdesk.dp0.cc".to_owned()|g' src/common.rs
 
-      - name: Update submodules
+      - name: Commit all changes
         run: |
-          git submodule update --init --recursive --remote
-
-      - name: Commit changes
-        run: |
-          git add .gitmodules src/common.rs
-          git submodule foreach --recursive 'git add .'
+          git add .
           git commit -m "Sync upstream and update URLs [skip ci]" || echo "No changes to commit"
           
       - name: Push changes
