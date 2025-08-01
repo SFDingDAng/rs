@@ -1,8 +1,5 @@
 name: Sync upstream and modify specific files
 
-
- 
-
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -11,13 +8,18 @@ on:
 jobs:
   sync-and-modify:
     runs-on: ubuntu-latest
+    
+    # 关键修正：使用 contents: write 来获取推送代码和修改工作流程文件的权限
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout current repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: false  # 先不检出子模块
-
+          submodules: false
+      
       - name: Add upstream remote
         run: git remote add upstream https://github.com/rustdesk/rustdesk.git
 
@@ -28,29 +30,32 @@ jobs:
         run: |
           sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
           git add .gitmodules
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update submodule URL" || echo "No changes to commit"
 
       - name: Initialize submodules with new URL
         run: |
-          git submodule sync  # 同步新的URL
+          git submodule sync
           git submodule update --init --recursive --force
 
       - name: Merge upstream changes
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          # 重置所有子模块
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git submodule foreach --recursive 'git reset --hard'
-          # 合并主仓库
           git merge upstream/master --allow-unrelated-histories || true
-          # 再次更新子模块
           git submodule update --recursive --force
 
       - name: Modify src/common.rs file
         run: |
           sed -i 's|"https://admin.rustdesk.com".to_owned()|"https://rustdesk.dp0.cc".to_owned()|g' src/common.rs
 
-      - name: Push changes
+      - name: Commit all changes
         run: |
-          git config --unset credential.helper
-          git push https://${{ secrets.PAT }}@github.com/SFDingDAng/rs.git HEAD:master
+          git add .
+          git commit -m "Sync upstream and update URLs [skip ci]" || echo "No changes to commit"
+          
+      - name: Push changes
+        # 不需要任何令牌或特殊配置，它会自动使用被授予权限的 GITHUB_TOKEN
+        run: git push
