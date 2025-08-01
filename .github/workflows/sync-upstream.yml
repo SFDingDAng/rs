@@ -2,8 +2,8 @@ name: Sync upstream and modify specific files
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天UTC午夜运行
-  workflow_dispatch:     # 允许手动触发
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   sync-and-modify:
@@ -12,23 +12,32 @@ jobs:
       - name: Checkout current repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录
+          fetch-depth: 0
+          submodules: 'recursive'  # 确保检出子模块
 
       - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/rustdesk/rustdesk.git
-          git fetch upstream
+          git fetch upstream --recurse-submodules
 
       - name: Merge upstream changes
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git merge upstream/master --allow-unrelated-histories
+          # 先重置子模块
+          git submodule foreach --recursive 'git reset --hard'
+          # 尝试合并
+          git merge upstream/master --allow-unrelated-histories || true
+          # 处理子模块冲突
+          if [ -f .gitmodules.merge ]; then
+            mv .gitmodules.merge .gitmodules
+          fi
+          git submodule update --init --recursive --force
 
       - name: Modify .gitmodules file
         run: |
           sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
-          git submodule sync  # 更新子模块引用
+          git submodule sync
 
       - name: Modify src/common.rs file
         run: |
@@ -36,11 +45,12 @@ jobs:
 
       - name: Update submodules
         run: |
-          git submodule update --init --recursive
+          git submodule update --init --recursive --remote
 
       - name: Commit changes
         run: |
           git add .gitmodules src/common.rs
+          git submodule foreach --recursive 'git add .'
           git commit -m "Sync upstream and update URLs [skip ci]" || echo "No changes to commit"
           
       - name: Push changes
