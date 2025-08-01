@@ -1,51 +1,59 @@
-name: '[DEBUG] Sync upstream and modify files'
+name: Sync with Upstream and Update Files
 
 on:
-  workflow_dispatch: # 暂时只保留手动触发，方便调试
+  schedule:
+    # 每天的 UTC 时间 0 点运行 (北京时间早上8点)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
-  debug-sync:
+  sync-and-push:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: 1. Verify PAT Secret is being passed
-        run: |
-          echo "Verifying the PAT secret..."
-          if [ -z "${{ secrets.PAT }}" ]; then
-            echo "::error::Secret PAT is empty or not found!"
-            exit 1
-          else
-            echo "::notice::Secret PAT is present. Length: ${{ env.PAT_LENGTH }}"
-          fi
-        env:
-          # 我们不直接打印 secret，而是打印它的长度，这既安全又能确认它存在
-          PAT_LENGTH: ${{ secrets.PAT && 'non-empty' || 'empty' }}
-
-      - name: 2. Checkout current repo
+      - name: Checkout repo using PAT
         uses: actions/checkout@v4
         with:
-          # 我们这次用 PAT 来 checkout，这是对 PAT 权限的第一次真实考验
+          # 关键：使用 PAT 进行检出，这会为后续的 git push 自动配置好认证
           token: ${{ secrets.PAT }}
-          fetch-depth: 0
+          fetch-depth: 0 # 获取所有历史记录，以便合并
       
-      # ... 中间的修改步骤保持不变 ...
-      - name: 3. Perform file modifications
+      - name: Configure Git user
         run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync with upstream and modify files
+        run: |
+          # 添加上游仓库
           git remote add upstream https://github.com/rustdesk/rustdesk.git
+          
+          # 从上游仓库拉取最新内容
           git fetch upstream
+          
+          # --- 开始您的自定义修改 ---
           sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
           git submodule sync
           git submodule update --init --recursive --force
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git submodule foreach --recursive 'git reset --hard'
-          git merge upstream/master --allow-unrelated-histories || true
+          
+          # 合并上游 master 分支的更改
+          git merge upstream/master --allow-unrelated-histories -m "Merge upstream/master"
+          
           git submodule update --recursive --force
           sed -i 's|"https://admin.rustdesk.com".to_owned()|"https://rustdesk.dp0.cc".to_owned()|g' src/common.rs
-          git add -A
-          git commit -m "Sync upstream and update URLs [skip ci]" || echo "No new changes to commit"
-
-      - name: 4. Attempt to push changes
+          
+      - name: Commit and push changes
         run: |
-          echo "Attempting to push to master branch..."
-          git push origin HEAD:master
+          # 检查是否有文件变动
+          if [[ -z $(git status -s) ]]; then
+            echo "No changes to commit. Working tree clean."
+          else
+            echo "Changes detected. Committing and pushing..."
+            git add -A
+            # 使用 || true 防止在没有改动时 commit 失败导致整个工作流失败
+            git commit -m "chore: Sync with upstream and update URLs" || true
+            
+            # 关键：直接推送到 origin，认证已由 checkout 步骤处理
+            git push origin HEAD:master
+          fi
