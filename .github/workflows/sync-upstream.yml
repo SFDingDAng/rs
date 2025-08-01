@@ -53,6 +53,4 @@ jobs:
           git commit -m "Sync upstream and update URLs [skip ci]" || echo "No changes to commit"
           
       - name: Push changes
-        run: git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: git push https://${{ secrets.PAT }}@github.com/SFDingDAng/rs.git HEAD:master
