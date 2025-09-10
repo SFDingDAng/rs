@@ -1,0 +1,70 @@
+name: Sync upstream and modify specific files
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync-and-modify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT }}
+          submodules: false
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/rustdesk/rustdesk.git
+
+      - name: Fetch upstream
+        run: git fetch upstream master
+
+      - name: Update .gitmodules with new URL
+        run: |
+          if [ -f .gitmodules ]; then
+            sed -i 's|https://github.com/rustdesk/hbb_common|https://github.com/SFDingDAng/hbb|g' .gitmodules
+            git add .gitmodules
+            git commit -m "Update submodule URL" || echo "No changes to .gitmodules"
+          fi
+
+      - name: Sync and update submodules
+        run: |
+          git submodule sync
+          git submodule update --init --recursive --force
+
+      - name: Merge upstream changes
+        run: |
+          # 尝试合并，如果冲突则中止
+          if ! git merge --no-edit upstream/master; then
+            echo "合并冲突发生，正在中止..."
+            git merge --abort
+            exit 1
+          fi
+
+      - name: Modify src/common.rs file
+        run: |
+          if [ -f src/common.rs ]; then
+            sed -i 's|"https://admin.rustdesk.com".to_owned()|"https://rustdesk.dp0.cc".to_owned()|g' src/common.rs
+          else
+            echo "警告: src/common.rs 文件不存在"
+          fi
+
+      - name: Commit and push changes
+        run: |
+          # 检查是否有更改需要提交
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "没有需要提交的更改"
+            exit 0
+          fi
+
+          git add .
+          git commit -m "Auto sync: $(date +'%Y-%m-%d %H:%M:%S') [skip ci]"
+          git push https://${{ secrets.PAT }}@github.com/SFDingDAng/rs.git HEAD:master
